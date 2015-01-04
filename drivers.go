@@ -36,23 +36,6 @@ func (d *PostgresDriver) MarkVersionAsExecuted(transaction *sql.Tx, version time
 	return err
 }
 
-type SqliteDriver struct{}
-
-func (d *SqliteDriver) CreateVersionsTable(database *sqlx.DB) error {
-	_, err := database.Exec(`CREATE TABLE IF NOT EXISTS database_versions(version TEXT);`)
-	return err
-}
-
-func (d *SqliteDriver) VersionHasBeenExecuted(database *sqlx.DB, version time.Time) (bool, error) {
-	var count int
-	err := database.Get(&count, "SELECT COUNT(*) FROM database_versions WHERE version=$1", version)
-	if err != nil {
-		return false, err
-	}
-	return count > 0, nil
-}
-
-func (d *SqliteDriver) MarkVersionAsExecuted(transaction *sql.Tx, version time.Time) error {
-	_, err := transaction.Exec("INSERT INTO database_versions (version) VALUES ($1)", version)
-	return err
+type SqliteDriver struct {
+	PostgresDriver
 }
