@@ -10,10 +10,20 @@ go get github.com/AndrewVos/mig/cmd/mig
 
 ```
 $ mkdir migrations
+
 $ mig ./migrations create_table
 creating migration 20150104013210_create_table.sql
+$ cat migrations/20150104013210_create_table.sql
+-- up
+
+-- down
+
 $ mig ./migrations add_column_to_table
 creating migration 20150104013218_add_column_to_table.sql
+$ cat migrations/20150104013218_add_column_to_table.sql
+-- up
+
+-- down
 ```
 
 ## Running migrations
