@@ -42,7 +42,7 @@ func Migrate(driverName string, databaseURL string, migrationsPath string) error
 	if err != nil {
 		return err
 	}
-	return migrations.ExecuteInOrder(driver, database)
+	return migrations.Up(driver, database)
 }
 
 func Rollback(driverName string, databaseURL string, migrationsPath string) error {
@@ -61,5 +61,5 @@ func Rollback(driverName string, databaseURL string, migrationsPath string) erro
 	if err != nil {
 		return err
 	}
-	return migrations.Rollback(driver, database)
+	return migrations.Down(driver, database)
 }
