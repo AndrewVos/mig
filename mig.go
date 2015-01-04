@@ -3,17 +3,25 @@ package mig
 import (
 	"errors"
 	"fmt"
-	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
 	"io/ioutil"
 	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
+	_ "github.com/mattn/go-sqlite3"
 )
 
+var supportedDrivers = map[string]bool{
+	"postgres": true,
+	"sqlite3":  true,
+}
+
 func Migrate(driver string, databaseURL string, migrationsPath string) error {
-	if driver != "postgres" {
+	if !supportedDrivers[driver] {
 		return errors.New(fmt.Sprintf("Driver %q is not supported", driver))
 	}
 
@@ -34,7 +42,7 @@ func Migrate(driver string, databaseURL string, migrationsPath string) error {
 	}
 
 	var migrationFiles []string
-	var migrations []Migration
+	var migrations []*Migration
 	for _, file := range files {
 		if !file.IsDir() {
 			if strings.HasSuffix(file.Name(), ".sql") {
@@ -45,14 +53,7 @@ func Migrate(driver string, databaseURL string, migrationsPath string) error {
 	sort.Strings(migrationFiles)
 
 	for _, migrationFile := range migrationFiles {
-		version := regexp.MustCompile("^\\d+").FindString(migrationFile)
-		if err != nil {
-			return err
-		}
-		migrations = append(migrations, Migration{
-			Path:    path.Join(migrationsPath, migrationFile),
-			Version: version,
-		})
+		migrations = append(migrations, NewMigrationFromPath(path.Join(migrationsPath, migrationFile)))
 	}
 
 	for _, migration := range migrations {
@@ -69,6 +70,9 @@ func createVersionsTable(driver string, database *sqlx.DB) error {
 	if driver == "postgres" {
 		_, err := database.Exec(`CREATE TABLE IF NOT EXISTS database_versions(version TEXT);`)
 		return err
+	} else if driver == "sqlite3" {
+		_, err := database.Exec(`CREATE TABLE IF NOT EXISTS database_versions(version TEXT);`)
+		return err
 	}
 	return nil
 }
@@ -76,14 +80,24 @@ func createVersionsTable(driver string, database *sqlx.DB) error {
 type Migration struct {
 	Path    string
 	Version string
+	content string
+}
+
+func NewMigrationFromPath(path string) *Migration {
+	baseName := filepath.Base(path)
+	version := regexp.MustCompile("^\\d+").FindString(baseName)
+	return &Migration{
+		Path:    path,
+		Version: version,
+	}
 }
 
 func (m Migration) Execute(driver string, database *sqlx.DB) error {
-	if driver == "postgres" {
+	if driver == "postgres" || driver == "sqlite3" {
 		var count int
 		err := database.Get(&count, "SELECT COUNT(*) FROM database_versions WHERE version=$1", m.Version)
 		if err != nil {
-			return migrationError(m.Path, err)
+			return m.Error(err)
 		}
 		if count == 1 {
 			return nil
@@ -91,33 +105,39 @@ func (m Migration) Execute(driver string, database *sqlx.DB) error {
 	}
 	fmt.Printf("Executing migration %v\n", m.Path)
 
-	b, err := ioutil.ReadFile(m.Path)
+	contents, err := m.Contents()
 	if err != nil {
-		return migrationError(m.Path, err)
+		return m.Error(err)
 	}
 
 	tx, err := database.Begin()
-	_, err = tx.Exec(string(b))
+	_, err = tx.Exec(string(contents))
 	if err != nil {
 		tx.Rollback()
-		return migrationError(m.Path, err)
+		return m.Error(err)
 	}
 	_, err = tx.Exec("INSERT INTO database_versions (version) VALUES ($1)", m.Version)
 	if err != nil {
 		tx.Rollback()
-		return migrationError(m.Path, err)
+		return m.Error(err)
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return migrationError(m.Path, err)
+		return m.Error(err)
 	}
 
 	return nil
 }
 
-func migrationError(migration string, err error) error {
+func (m *Migration) Contents() ([]byte, error) {
+	b, err := ioutil.ReadFile(m.Path)
+	return b, err
+}
+
+func (m *Migration) Error(err error) error {
+	contents, _ := m.Contents()
 	return errors.New(
-		fmt.Sprintf("failed to run migration %q\n%v", migration, err),
+		fmt.Sprintf("failed to run migration %q\nerror: %v\ncontents: %v\n", m.Path, err, string(contents)),
 	)
 }
