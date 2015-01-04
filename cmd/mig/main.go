@@ -6,6 +6,8 @@ import (
 	"os"
 	"path"
 	"time"
+
+	"github.com/AndrewVos/mig"
 )
 
 func main() {
@@ -13,8 +15,7 @@ func main() {
 		migrationsPath := os.Args[1]
 		migrationName := os.Args[2]
 
-		const layout = "20060102150405"
-		migrationTime := time.Now().Format(layout)
+		migrationTime := time.Now().Format(mig.MigrationTimeLayout)
 
 		migrationName = migrationTime + "_" + migrationName + ".sql"
 		fileName := path.Join(migrationsPath, migrationName)
