@@ -21,10 +21,10 @@ func main() {
 
 		fmt.Printf("creating migration %v\n", migrationName)
 		f, err := os.Create(fileName)
-		f.Close()
 		if err != nil {
 			log.Fatal(err)
 		}
+		f.Close()
 
 		return
 	}
