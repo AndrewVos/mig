@@ -32,3 +32,7 @@ func main() {
 	}
 }
 ```
+
+## Supported drivers
+
+- postgres
