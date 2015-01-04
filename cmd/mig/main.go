@@ -25,7 +25,12 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		f.Close()
+		defer f.Close()
+
+		_, err = f.Write([]byte("-- up\n\n-- down"))
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		return
 	}

@@ -3,56 +3,63 @@ package mig
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"path"
-	"strings"
 
 	"github.com/jmoiron/sqlx"
 )
-
-var currentDriver Driver
 
 const (
 	MigrationTimeLayout = "20060102150405"
 )
 
-func Migrate(driver string, databaseURL string, migrationsPath string) error {
+func getDriver(driver string) (Driver, error) {
 	if driver == "postgres" {
-		currentDriver = &PostgresDriver{}
+		return &PostgresDriver{}, nil
 	} else if driver == "sqlite3" {
-		currentDriver = &SqliteDriver{}
+		return &SqliteDriver{}, nil
 	} else {
-		return errors.New(fmt.Sprintf("%q is not a supported driver", driver))
+		return nil, errors.New(fmt.Sprintf("%q is not a supported driver", driver))
+	}
+}
+
+func Migrate(driverName string, databaseURL string, migrationsPath string) error {
+	driver, err := getDriver(driverName)
+	if err != nil {
+		return err
 	}
 
-	database, err := sqlx.Connect(driver, databaseURL)
+	database, err := sqlx.Connect(driverName, databaseURL)
 	if err != nil {
 		return err
 	}
 	defer database.Close()
 
-	err = currentDriver.CreateVersionsTable(database)
+	err = driver.CreateVersionsTable(database)
 	if err != nil {
 		return err
 	}
 
-	files, err := ioutil.ReadDir(migrationsPath)
+	migrations, err := LoadMigrationsFromPath(migrationsPath)
+	if err != nil {
+		return err
+	}
+	return migrations.ExecuteInOrder(driver, database)
+}
+
+func Rollback(driverName string, databaseURL string, migrationsPath string) error {
+	driver, err := getDriver(driverName)
 	if err != nil {
 		return err
 	}
 
-	var migrations Migrations
-	for _, file := range files {
-		if !file.IsDir() {
-			if strings.HasSuffix(file.Name(), ".sql") {
-				migration, err := NewMigrationFromPath(path.Join(migrationsPath, file.Name()))
-				if err != nil {
-					return err
-				}
-				migrations = append(migrations, migration)
-			}
-		}
+	database, err := sqlx.Connect(driverName, databaseURL)
+	if err != nil {
+		return err
 	}
+	defer database.Close()
 
-	return migrations.ExecuteInOrder(database)
+	migrations, err := LoadMigrationsFromPath(migrationsPath)
+	if err != nil {
+		return err
+	}
+	return migrations.Rollback(driver, database)
 }

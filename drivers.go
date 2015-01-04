@@ -12,6 +12,7 @@ type Driver interface {
 	CreateVersionsTable(database *sqlx.DB) error
 	VersionHasBeenExecuted(database *sqlx.DB, version string) (bool, error)
 	MarkVersionAsExecuted(transaction *sql.Tx, version string) error
+	UnmarkVersionAsExecuted(transaction *sql.Tx, version string) error
 }
 
 type PostgresDriver struct{}
@@ -32,6 +33,11 @@ func (d *PostgresDriver) VersionHasBeenExecuted(database *sqlx.DB, version strin
 
 func (d *PostgresDriver) MarkVersionAsExecuted(transaction *sql.Tx, version string) error {
 	_, err := transaction.Exec("INSERT INTO database_versions (version) VALUES ($1)", version)
+	return err
+}
+
+func (d *PostgresDriver) UnmarkVersionAsExecuted(transaction *sql.Tx, version string) error {
+	_, err := transaction.Exec("DELETE FROM database_versions WHERE version=$1", version)
 	return err
 }
 

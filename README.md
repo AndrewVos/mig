@@ -31,8 +31,15 @@ import (
 )
 
 func main() {
+	// Run all migrations that haven't run yet:
 	// err := mig.Migrate("sqlite3", "file.sqlite", "./migrations")
 	err := mig.Migrate("postgres", "host=/var/run/postgresql dbname=my_database sslmode=disable", "./migrations")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Rollback a single migration:
+	err := mig.Rollback("postgres", "host=/var/run/postgresql dbname=my_database sslmode=disable", "./migrations")
 	if err != nil {
 		log.Fatal(err)
 	}
