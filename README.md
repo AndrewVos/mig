@@ -3,7 +3,7 @@
 ## Installing the command line tool
 
 ```
-go get github.com/AndrewVos/mig/cmd
+go get github.com/AndrewVos/mig/cmd/mig
 ```
 
 ## Creating a new migration file
