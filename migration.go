@@ -48,7 +48,7 @@ func NewMigrationFromPath(path string) (*Migration, error) {
 }
 
 func (m Migration) Execute(database *sqlx.DB) error {
-	versionHasBeenExecuted, err := currentDriver.VersionHasBeenExecuted(database, m.Version)
+	versionHasBeenExecuted, err := currentDriver.VersionHasBeenExecuted(database, m.VersionAsString())
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func (m Migration) Execute(database *sqlx.DB) error {
 		tx.Rollback()
 		return m.Error(err)
 	}
-	err = currentDriver.MarkVersionAsExecuted(tx, m.Version)
+	err = currentDriver.MarkVersionAsExecuted(tx, m.VersionAsString())
 	if err != nil {
 		tx.Rollback()
 		return m.Error(err)
@@ -85,6 +85,10 @@ func (m Migration) Execute(database *sqlx.DB) error {
 func (m *Migration) Contents() ([]byte, error) {
 	b, err := ioutil.ReadFile(m.Path)
 	return b, err
+}
+
+func (m *Migration) VersionAsString() string {
+	return m.Version.Format(MigrationTimeLayout)
 }
 
 func (m *Migration) Error(err error) error {
