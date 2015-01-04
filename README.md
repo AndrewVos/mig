@@ -26,7 +26,8 @@ import (
 )
 
 func main() {
-	err := mig.Migrate("postgres", databaseURL(), "./migrations")
+	// err := mig.Migrate("sqlite3", "file.sqlite", "./migrations")
+	err := mig.Migrate("postgres", "host=/var/run/postgresql dbname=my_database sslmode=disable", "./migrations")
 	if err != nil {
 		log.Fatal(err)
 	}
