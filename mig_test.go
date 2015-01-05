@@ -64,7 +64,7 @@ func runMigrations(t *testing.T) {
 }
 
 func rollbackMigrations(t *testing.T) {
-	err := Rollback("sqlite3", "db.sqlite", "migrations")
+	err := MigrateDown("sqlite3", "db.sqlite", "migrations")
 	if err != nil {
 		t.Fatal(err)
 	}

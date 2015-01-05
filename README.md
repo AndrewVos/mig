@@ -48,8 +48,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Rollback a single migration:
-	err := mig.Rollback("postgres", "host=/var/run/postgresql dbname=my_database sslmode=disable", "./migrations")
+	// Roll back a single migration:
+	err := mig.MigrateDown("postgres", "host=/var/run/postgresql dbname=my_database sslmode=disable", "./migrations")
 	if err != nil {
 		log.Fatal(err)
 	}

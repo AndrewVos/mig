@@ -45,7 +45,7 @@ func Migrate(driverName string, databaseURL string, migrationsPath string) error
 	return migrations.Up(driver, database)
 }
 
-func Rollback(driverName string, databaseURL string, migrationsPath string) error {
+func MigrateDown(driverName string, databaseURL string, migrationsPath string) error {
 	driver, err := getDriver(driverName)
 	if err != nil {
 		return err
